@@ -12,6 +12,7 @@ import AddPlacePopup from "./AddPlacePopup";
 import Login from './Login';
 import Register from './Register';
 import ProtectedRoute from "./ProtectedRoute";
+import InfoTooltip from './InfoTooltip';
 import * as auth from '../utils/auth';
 
 
@@ -30,6 +31,9 @@ const [currentUser, setCurrentUser] = React.useState({
     cohort: "",
 });
 const [cards, setCards] = React.useState([]);
+const [isInfoTooltipOpen, setIsInfoTooltipOpen] = React.useState(false);
+const [isRegistrationSuccessful, setIsRegistrationSuccessful] = React.useState(false);
+const [authorizationEmail, setAuthorizationEmail] = React.useState('');
 const history = useHistory();
 
 React.useEffect(() => {
@@ -55,10 +59,7 @@ React.useEffect(() => {
 }, []);
 
 function handleCardLike(card) {
-    // Снова проверяем, есть ли уже лайк на этой карточке
     const isLiked = card.likes.some((i) => i._id === currentUser._id);
-
-    // Отправляем запрос в API и получаем обновлённые данные карточки
     api
       .changeLikeCardStatus(card._id, !isLiked)
       .then((newCard) => {
@@ -95,6 +96,7 @@ function handleEditAvatarPopupOpen() {
 
 const handleCardClick = card => {
     setSelectedCard(card);
+    setIsInfoTooltipOpen(false);
 };
 
 const handleUpdateUser = (newUserInfo) => {
@@ -130,20 +132,31 @@ const handleAddPlaceSubmit = (newData) => {
     });
 };
 
+const handleInfoTooltip = () => {
+  setIsInfoTooltipOpen(!isInfoTooltipOpen);
+};
+
 function closeAllPopups() {
     setEditProfilePopupOpen(false);
     setAddPlacePopupOpen(false);
     setEditAvatarPopupOpen(false);
     setSelectedCard({});
+    setIsInfoTooltipOpen(false);
   }
 
   const handleRegistration = (data) => {
     return auth
       .register(data)
       .then((data) => {
+        setIsRegistrationSuccessful(true);
+        handleInfoTooltip();
         history.push('/sign-in');
       })
-      .catch((err) => console.log(err));
+      .catch((err) => {
+        console.log(err);
+        setIsRegistrationSuccessful(false);
+        handleInfoTooltip();
+      });
   };
 
   const handleAuthorization = (data) => {
@@ -154,13 +167,48 @@ function closeAllPopups() {
         localStorage.setItem('jwt', data.token);
         history.push('/');
       })
+      .catch((err) => {
+        console.log(err);
+        handleInfoTooltip();
+      });
+  };
+
+  const handleSignOut = () => {
+    setIsLoggedIn(false);
+    localStorage.removeItem('jwt');
+    history.push('/sign-in');
+  };
+
+
+  const tokenCheck = () => {
+    const jwt = localStorage.getItem('jwt');
+    if (!jwt) {
+      return;
+    }
+    auth
+      .getContent(jwt)
+      .then((data) => {
+        setAuthorizationEmail(data.data.email);
+        setIsLoggedIn(true);
+        history.push('/');
+      })
       .catch((err) => console.log(err));
   };
+
+  React.useEffect(() => {
+    tokenCheck();
+  }, []);
+
+  React.useEffect(() => {
+    if (isLoggedIn) {
+      history.push('/');
+    }
+  }, [isLoggedIn]);
 
   return (
     <CurrentUserContext.Provider value={currentUser}>
      <div className="page">
-        <Header />
+        <Header loggedIn={isLoggedIn} userEmail={authorizationEmail} onSignOut={handleSignOut} />
         <Switch>
           <Route path="/sign-in">
             <Login onLogin={handleAuthorization} />
@@ -193,8 +241,12 @@ function closeAllPopups() {
           onClose={closeAllPopups}
           onAddPlace={handleAddPlaceSubmit}
         />
-            
-            <ImagePopup card={selectedCard} onClose={closeAllPopups}/>
+        <InfoTooltip
+          onClose={closeAllPopups}
+          isOpen={isInfoTooltipOpen}
+          isSuccess={isRegistrationSuccessful}
+        />    
+        <ImagePopup card={selectedCard} onClose={closeAllPopups}/>
         </div>
      
      </CurrentUserContext.Provider>
