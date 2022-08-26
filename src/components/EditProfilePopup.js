@@ -1,32 +1,22 @@
 import React from "react";
 import { CurrentUserContext } from "../contexts/CurrentUserContext";
 import PopupWithForm from "./PopupWithForm";
+import { useFormAndValidation } from "../hooks/useFormAndValidation";
 
 const EditProfilePopup = ({ isOpen, onClose, onUpdateUser }) => {
   const currentUser = React.useContext(CurrentUserContext);
-  const [name, setName] = React.useState("");
-  const [description, setDescription] = React.useState("");
-
-  const handleNameChange = (event) => {
-    setName(event.target.value);
-  };
-
-  const handleDescriptionChange = (event) => {
-    setDescription(event.target.value);
-  };
-
+  const { values, handleChange, errors, isValid, resetForm } = useFormAndValidation();
 
   React.useEffect(() => {
-    setName(currentUser.name);
-    setDescription(currentUser.about);
-  }, [currentUser, isOpen]);
+    currentUser ? resetForm(currentUser) : resetForm();
+  }, [ resetForm, currentUser, isOpen]);
 
   const handleSubmit = (event) => {
     event.preventDefault();
 
     onUpdateUser({
-        title: name,
-        subtitle: description,
+        title: values.name,
+        subtitle: values.about,
     });
   };
 
@@ -38,13 +28,14 @@ const EditProfilePopup = ({ isOpen, onClose, onUpdateUser }) => {
                   isOpen={isOpen}
                   onClose={onClose}
                   onSubmit={handleSubmit}
+                  isDisabled={!isValid}
                   >
-                    <input className="popup__input popup__input_type_name" id="name-input" placeholder="Введите имя" name="title" type="text" minLength="2" maxLength="40" required value={name}
-          onChange={handleNameChange} />
-                    <span className="popup__input-error" id="name-input-error"></span>
-                    <input className="popup__input popup__input_type_description" id="description-input" placeholder="Введите информацию о себе" name="subtitle" type="text" minLength="2" maxLength="200" required  value={description}
-          onChange={handleDescriptionChange} />
-                    <span className="popup__input-error" id="description-input-error"></span>
+                    <input className="popup__input popup__input_type_name" id="name-input" placeholder="Введите имя" name="name" type="text" minLength="2" maxLength="40" required value={values.name || ''}
+          onChange={handleChange} />
+                    <span className="popup__input-error" id="name-input-error">{errors.name}</span>
+                    <input className="popup__input popup__input_type_description" id="description-input" placeholder="Введите информацию о себе" name="about" type="text" minLength="2" maxLength="200" required  value={values.about || ''}
+          onChange={handleChange} />
+                    <span className="popup__input-error" id="description-input-error">{errors.about}</span>
            
                   
               </PopupWithForm>

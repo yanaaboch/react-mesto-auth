@@ -142,19 +142,37 @@ function closeAllPopups() {
     setEditAvatarPopupOpen(false);
     setSelectedCard({});
     setIsInfoTooltipOpen(false);
+}
+
+const isOpen = isEditAvatarPopupOpen || isEditProfilePopupOpen || isAddPlacePopupOpen || selectedCard
+
+React.useEffect(() => {
+  function closeByEscape(evt) {
+    if(evt.key === 'Escape') {
+      closeAllPopups();
+    }
   }
+  if(isOpen) {
+    document.addEventListener('keydown', closeByEscape);
+    return () => {
+      document.removeEventListener('keydown', closeByEscape);
+    }
+  }
+}, [isOpen]) 
+
 
   const handleRegistration = (data) => {
     return auth
       .register(data)
       .then((data) => {
         setIsRegistrationSuccessful(true);
-        handleInfoTooltip();
         history.push('/sign-in');
       })
       .catch((err) => {
         console.log(err);
         setIsRegistrationSuccessful(false);
+      })
+      .finally(() => {
         handleInfoTooltip();
       });
   };
